@@ -6,49 +6,58 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using RemoteLlama.Helpers;
 
-public class PullCommandHandler(string modelId, ILogger logger, ConsoleHelper consoleHelper) : BaseCommandHandler(logger)
+public class PullCommandHandler(string modelId, bool insecure, ILogger logger, ConsoleHelper consoleHelper) : BaseCommandHandler(logger)
 {
     private readonly string _modelId = modelId;
+    private readonly bool _insecure = insecure;
     private readonly ConsoleHelper _consoleHelper = consoleHelper;
 
     protected override async Task ExecuteImplAsync()
     {
-        var url = ConfigManager.Url + "pull";
-        _logger.LogInformation("Pulling model: {ModelId} from {Url}", _modelId, url);
-        
-        using var client = new HttpClient();
-        client.Timeout = TimeSpan.FromSeconds(20);
-        
-        var request = new HttpRequestMessage(HttpMethod.Post, url)
+        try
         {
-            Content = new StringContent(
-                JsonSerializer.Serialize(new { model = _modelId }), 
-                Encoding.UTF8, 
-                "application/json")
-        };
-
-        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        
-        using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-        using var reader = new StreamReader(stream);
-
-        await _consoleHelper.RunWithProgressAsync($"Downloading {_modelId}", async updateAction =>
-        {
-            while (!reader.EndOfStream)
+            var url = ConfigManager.Url + "pull";
+            _logger.LogInformation("Pulling model: {ModelId} from {Url}", _modelId, url);
+            
+            using var client = new HttpClient();
+            client.Timeout = TimeSpan.FromSeconds(20);
+            
+            var request = new HttpRequestMessage(HttpMethod.Post, url)
             {
-                var line = await reader.ReadLineAsync().ConfigureAwait(false);
-                if (string.IsNullOrEmpty(line)) continue;
+                Content = new StringContent(
+                    JsonSerializer.Serialize(new { model = _modelId, insecure = _insecure }), 
+                    Encoding.UTF8, 
+                    "application/json")
+            };
 
-                var progressData = JsonSerializer.Deserialize<ProgressData>(line) 
-                    ?? throw new JsonException("Failed to deserialize progress data");
-                
-                if (progressData.Total > 0)
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            
+            using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            using var reader = new StreamReader(stream);
+
+            await _consoleHelper.RunWithProgressAsync($"Downloading {_modelId}", async updateAction =>
+            {
+                while (!reader.EndOfStream)
                 {
-                    updateAction(progressData.Completed, progressData.Total);
+                    var line = await reader.ReadLineAsync().ConfigureAwait(false);
+                    if (string.IsNullOrEmpty(line)) continue;
+
+                    var progressData = JsonSerializer.Deserialize<ProgressData>(line) 
+                        ?? throw new JsonException("Failed to deserialize progress data");
+                    
+                    if (progressData.Total > 0)
+                    {
+                        updateAction(progressData.Completed, progressData.Total);
+                    }
                 }
-            }
-        }).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to pull model: {ModelId}", _modelId);
+            ConsoleHelper.ShowError($"Failed to pull model {_modelId}.");
+        }
     }
 
     private class ProgressData

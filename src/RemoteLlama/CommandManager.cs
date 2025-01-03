@@ -45,14 +45,24 @@ public class CommandManager(ILogger logger, ConsoleHelper consoleHelper)
         // Define the command and its required model ID argument
         var command = new Command("pull", "Pull a model from Hugging Face");
         var argument = new Argument<string>("model", "The model ID to pull");
+        var helpFlag = new Option<bool>(["-h", "--help"], "help for pull");
+        var insecureFlag = new Option<bool>("--insecure", "Use an insecure registry");
+
         command.AddArgument(argument);
+        command.AddOption(helpFlag);
+        command.AddOption(insecureFlag);
 
         // Set up the command handler that will execute when this command is invoked
-        command.SetHandler(async (model) =>
+        command.SetHandler(async (model, help, insecure) =>
         {
-            var handler = new PullCommandHandler(model, _logger, _consoleHelper);
+            if (help)
+            {
+                return;
+            }
+
+            var handler = new PullCommandHandler(model, insecure, _logger, _consoleHelper);
             await handler.ExecuteAsync().ConfigureAwait(false);
-        }, argument);
+        }, argument, helpFlag, insecureFlag);
 
         return command;
     }

@@ -50,4 +50,6 @@ public class ConsoleHelper
     {
         _currentTask?.StopTask();
     }
+
+    public static void ShowError(string errorMessage) => AnsiConsole.MarkupLine($"[red]{errorMessage}[/]");
 } 

@@ -37,10 +37,10 @@ public class ProxyServer(string targetServerUrl, ILogger logger)
 
         logger.LogInformation("Processing request: {HttpMethod} {RawUrl}", request.HttpMethod, request.RawUrl);
 
-        var targetRoute = request.RawUrl?.ToLowerInvariant().TrimStart('/') ?? "";
-        if (targetRoute.StartsWith("api/"))
+        var targetRoute = request.RawUrl?.TrimStart('/') ?? "";
+        if (targetRoute.ToLowerInvariant().StartsWith("api/"))
         {
-            targetRoute = targetRoute.Substring(4);
+            targetRoute = targetRoute[4..];
         }
 
         var targetUrl = $"{_targetServerUrl}{targetRoute}";
