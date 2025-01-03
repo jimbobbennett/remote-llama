@@ -44,11 +44,11 @@ public class CommandManager(ILogger logger, ConsoleHelper consoleHelper)
     {
         // Define the command and its required model ID argument
         var command = new Command("pull", "Pull a model from Hugging Face");
-        var argument = new Argument<string>("model", "The model ID to pull");
+        var modelArgument = new Argument<string>("model", "The model ID to pull");
         var helpFlag = new Option<bool>(["-h", "--help"], "help for pull");
         var insecureFlag = new Option<bool>("--insecure", "Use an insecure registry");
 
-        command.AddArgument(argument);
+        command.AddArgument(modelArgument);
         command.AddOption(helpFlag);
         command.AddOption(insecureFlag);
 
@@ -62,7 +62,7 @@ public class CommandManager(ILogger logger, ConsoleHelper consoleHelper)
 
             var handler = new PullCommandHandler(model, insecure, _logger, _consoleHelper);
             await handler.ExecuteAsync().ConfigureAwait(false);
-        }, argument, helpFlag, insecureFlag);
+        }, modelArgument, helpFlag, insecureFlag);
 
         return command;
     }
@@ -75,15 +75,28 @@ public class CommandManager(ILogger logger, ConsoleHelper consoleHelper)
     {
         // Define the command and its required model ID argument
         var command = new Command("rm", "Remove a downloaded model");
-        var argument = new Argument<string>("model", "The model ID to remove");
-        command.AddArgument(argument);
+        var modelArgument = new Argument<string[]>("model", "The model ID to remove"){
+            Arity = ArgumentArity.OneOrMore
+        };
+        var helpFlag = new Option<bool>(["-h", "--help"], "help for rm");
+
+        command.AddArgument(modelArgument);
+        command.AddOption(helpFlag);
 
         // Set up the command handler that will execute when this command is invoked
-        command.SetHandler(async (model) =>
+        command.SetHandler(async (models, help) =>
         {
-            var handler = new RemoveCommandHandler(model, _logger, _consoleHelper);
-            await handler.ExecuteAsync().ConfigureAwait(false);
-        }, argument);
+            if (help)
+            {
+                return;
+            }
+
+            foreach (var model in models)
+            {
+                var handler = new RemoveCommandHandler(model, _logger, _consoleHelper);
+                await handler.ExecuteAsync().ConfigureAwait(false);
+            }
+        }, modelArgument, helpFlag);
 
         return command;
     }
