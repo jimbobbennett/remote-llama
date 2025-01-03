@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/RemoteLlama/bin/Debug/net9.0/RemoteLlama.dll",
+            "program": "${workspaceFolder}/src/RemoteLlama/bin/Debug/net9.0/ollama-darwin.dll",
             "args": ["serve"],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,

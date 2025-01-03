@@ -2,7 +2,7 @@ using Spectre.Console;
 
 namespace RemoteLlama.Helpers;
 
-public class ConsoleHelper
+internal class ConsoleHelper : IConsoleHelper
 {
     private Progress? _progress;
     private ProgressTask? _currentTask;
@@ -51,5 +51,22 @@ public class ConsoleHelper
         _currentTask?.StopTask();
     }
 
-    public static void ShowError(string errorMessage) => AnsiConsole.MarkupLine($"[red]{errorMessage}[/]");
-} 
+    public void ShowError(string errorMessage) => AnsiConsole.MarkupLine($"[red]{errorMessage}[/]");
+
+    public void WriteTable(IEnumerable<string> headers, IEnumerable<IEnumerable<string>> rows)
+    {
+        var table = new Table();
+
+        foreach (var header in headers)
+        {
+            table.AddColumn(header);
+        }
+
+        foreach (var row in rows)
+        {
+            table.AddRow(row.ToArray());
+        }
+
+        AnsiConsole.Write(table);
+    }
+}

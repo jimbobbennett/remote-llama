@@ -6,18 +6,17 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using RemoteLlama.Helpers;
 
-public class PullCommandHandler(string modelId, bool insecure, ILogger logger, ConsoleHelper consoleHelper) : BaseCommandHandler(logger)
+internal class PullCommandHandler(string modelId, bool insecure, ILogger logger, IConsoleHelper consoleHelper) : BaseCommandHandler(logger, consoleHelper)
 {
     private readonly string _modelId = modelId;
     private readonly bool _insecure = insecure;
-    private readonly ConsoleHelper _consoleHelper = consoleHelper;
 
     protected override async Task ExecuteImplAsync()
     {
         try
         {
             var url = ConfigManager.Url + "pull";
-            _logger.LogInformation("Pulling model: {ModelId} from {Url}", _modelId, url);
+            Logger.LogInformation("Pulling model: {ModelId} from {Url}", _modelId, url);
             
             using var client = new HttpClient();
             client.Timeout = TimeSpan.FromSeconds(20);
@@ -36,7 +35,7 @@ public class PullCommandHandler(string modelId, bool insecure, ILogger logger, C
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             using var reader = new StreamReader(stream);
 
-            await _consoleHelper.RunWithProgressAsync($"Downloading {_modelId}", async updateAction =>
+            await ConsoleHelper.RunWithProgressAsync($"Downloading {_modelId}", async updateAction =>
             {
                 while (!reader.EndOfStream)
                 {
@@ -55,7 +54,7 @@ public class PullCommandHandler(string modelId, bool insecure, ILogger logger, C
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to pull model: {ModelId}", _modelId);
+            Logger.LogError(ex, "Failed to pull model: {ModelId}", _modelId);
             ConsoleHelper.ShowError($"Failed to pull model {_modelId}.");
         }
     }

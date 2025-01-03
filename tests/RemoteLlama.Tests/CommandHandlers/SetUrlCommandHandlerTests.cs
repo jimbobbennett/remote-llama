@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using RemoteLlama.CommandHandlers;
+using RemoteLlama.Helpers;
 using Xunit;
 
 namespace RemoteLlama.Tests.CommandHandlers
@@ -8,10 +9,12 @@ namespace RemoteLlama.Tests.CommandHandlers
     public class SetUrlCommandHandlerTests
     {
         private readonly Mock<ILogger> _loggerMock;
+        private readonly Mock<IConsoleHelper> _consoleHelperMock;
 
         public SetUrlCommandHandlerTests()
         {
             _loggerMock = new Mock<ILogger>();
+            _consoleHelperMock = new Mock<IConsoleHelper>();
         }
 
         [Theory]
@@ -23,7 +26,7 @@ namespace RemoteLlama.Tests.CommandHandlers
         public async Task ExecuteAsync_ShouldSetUrlInConfigManager(string inputUrl, string expectedUrl)
         {
             // Arrange
-            var handler = new SetUrlCommandHandler(inputUrl, _loggerMock.Object);
+            var handler = new SetUrlCommandHandler(inputUrl, _loggerMock.Object, _consoleHelperMock.Object);
 
             // Act
             await handler.ExecuteAsync();

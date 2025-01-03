@@ -6,7 +6,7 @@ namespace RemoteLlama;
 /// Manages application configuration settings, storing them in a JSON file in the user's AppData folder.
 /// This static class provides thread-safe access to configuration values.
 /// </summary>
-public static class ConfigManager
+internal static class ConfigManager
 {
     /// <summary>
     /// The base directory path where configuration files are stored.

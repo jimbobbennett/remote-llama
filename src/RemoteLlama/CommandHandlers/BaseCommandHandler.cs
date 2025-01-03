@@ -1,20 +1,17 @@
 namespace RemoteLlama.CommandHandlers;
 using Microsoft.Extensions.Logging;
+using RemoteLlama.Helpers;
 
-public abstract class BaseCommandHandler
+internal abstract class BaseCommandHandler(ILogger logger, IConsoleHelper consoleHelper)
 {
-    protected readonly ILogger _logger;
-
-    protected BaseCommandHandler(ILogger logger)
-    {
-        _logger = logger;
-    }
+    protected ILogger Logger { get; } = logger;
+    protected IConsoleHelper ConsoleHelper { get; } = consoleHelper;
 
     public async Task ExecuteAsync()
     {
         if (string.IsNullOrEmpty(ConfigManager.Url) && this is not SetUrlCommandHandler)
         {
-            _logger.LogError("API URL has not been set. Use 'set-url' command first.");
+            Logger.LogError("API URL has not been set. Use 'set-url' command first.");
             throw new InvalidOperationException("API URL has not been set. Use 'set-url' command first.");
         }
 

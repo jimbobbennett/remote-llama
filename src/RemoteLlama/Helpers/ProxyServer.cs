@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace RemoteLlama.Helpers;
 
-public class ProxyServer(string targetServerUrl, ILogger logger)
+internal class ProxyServer(string targetServerUrl, ILogger logger)
 {
     private readonly string _targetServerUrl = targetServerUrl;
     private readonly ILogger logger = logger;
@@ -25,7 +25,7 @@ public class ProxyServer(string targetServerUrl, ILogger logger)
 
         while (true)
         {
-            var context = await listener.GetContextAsync();
+            var context = await listener.GetContextAsync().ConfigureAwait(false);
             _ = ProcessRequest(context, httpClient);
         }
     }
@@ -38,7 +38,7 @@ public class ProxyServer(string targetServerUrl, ILogger logger)
         logger.LogInformation("Processing request: {HttpMethod} {RawUrl}", request.HttpMethod, request.RawUrl);
 
         var targetRoute = request.RawUrl?.TrimStart('/') ?? "";
-        if (targetRoute.ToLowerInvariant().StartsWith("api/"))
+        if (targetRoute.StartsWith("api/", StringComparison.OrdinalIgnoreCase))
         {
             targetRoute = targetRoute[4..];
         }
@@ -62,13 +62,13 @@ public class ProxyServer(string targetServerUrl, ILogger logger)
             {
                 using var stream = request.InputStream;
                 var contentBytes = new byte[request.ContentLength64];
-                var read = await stream.ReadAsync(contentBytes.AsMemory(0, contentBytes.Length));
+                var read = await stream.ReadAsync(contentBytes.AsMemory(0, contentBytes.Length)).ConfigureAwait(false);
                 proxyRequest.Content = new ByteArrayContent(contentBytes);
                 proxyRequest.Content.Headers.ContentType = request.ContentType != null ?
                     System.Net.Http.Headers.MediaTypeHeaderValue.Parse(request.ContentType) : null;
             }
 
-            using var proxyResponse = await httpClient.SendAsync(proxyRequest, HttpCompletionOption.ResponseHeadersRead);
+            using var proxyResponse = await httpClient.SendAsync(proxyRequest, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
 
             // Copy response status and headers
             response.StatusCode = (int)proxyResponse.StatusCode;
@@ -78,19 +78,19 @@ public class ProxyServer(string targetServerUrl, ILogger logger)
             }
 
             // Send response content as a stream in chunks
-            using var responseStream = await proxyResponse.Content.ReadAsStreamAsync();
+            using var responseStream = await proxyResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
             var buffer = new byte[4096]; 
             int bytesRead;
-            while ((bytesRead = await responseStream.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0)
+            while ((bytesRead = await responseStream.ReadAsync(buffer.AsMemory(0, buffer.Length)).ConfigureAwait(false)) > 0)
             {
-                await response.OutputStream.WriteAsync(buffer.AsMemory(0, bytesRead));
-                await response.OutputStream.FlushAsync(); // Flush to send data immediately
+                await response.OutputStream.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
+                await response.OutputStream.FlushAsync().ConfigureAwait(false); // Flush to send data immediately
             }
         }
         catch (Exception ex)
         {
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            await response.OutputStream.WriteAsync(System.Text.Encoding.UTF8.GetBytes(ex.Message));
+            await response.OutputStream.WriteAsync(System.Text.Encoding.UTF8.GetBytes(ex.Message)).ConfigureAwait(false);
         }
         finally
         {

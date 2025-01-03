@@ -6,22 +6,14 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using RemoteLlama.Helpers;
 
-public class RemoveCommandHandler : BaseCommandHandler
+internal class RemoveCommandHandler(string modelId, ILogger logger, IConsoleHelper consoleHelper) : BaseCommandHandler(logger, consoleHelper)
 {
-    private readonly string _modelId;
-    private readonly ConsoleHelper _consoleHelper;
-
-    public RemoveCommandHandler(string modelId, ILogger logger, ConsoleHelper consoleHelper) 
-        : base(logger)
-    {
-        _modelId = modelId;
-        _consoleHelper = consoleHelper;
-    }
+    private readonly string _modelId = modelId;
 
     protected override async Task ExecuteImplAsync()
     {
          var url = ConfigManager.Url + "delete";
-        _logger.LogInformation("Removing model: {ModelId} from {Url}", _modelId, url); 
+        Logger.LogInformation("Removing model: {ModelId} from {Url}", _modelId, url); 
         
         using var client = new HttpClient();
         client.Timeout = TimeSpan.FromSeconds(20);
@@ -39,7 +31,8 @@ public class RemoveCommandHandler : BaseCommandHandler
         // Check for a 404 - this is an acceptable error code
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            _logger.LogError("Error: model '{ModelId}' not found", _modelId);
+            Logger.LogError("Error: model '{ModelId}' not found", _modelId);
+            ConsoleHelper.ShowError($"Model '{_modelId}' not found.");
             return;
         }
 
