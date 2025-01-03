@@ -9,21 +9,15 @@ namespace RemoteLlama;
 /// Manages the creation and configuration of CLI commands for RemoteLlama.
 /// This class is responsible for setting up all available commands and their handlers.
 /// </summary>
-public class CommandManager
+/// <remarks>
+/// Initializes a new instance of the CommandManager class.
+/// </remarks>
+/// <param name="logger">The logger instance for recording operations and errors</param>
+/// <param name="consoleHelper">The console helper instance for user interaction</param>
+public class CommandManager(ILogger logger, ConsoleHelper consoleHelper)
 {
-    private readonly ILogger _logger;
-    private readonly ConsoleHelper _consoleHelper;
-
-    /// <summary>
-    /// Initializes a new instance of the CommandManager class.
-    /// </summary>
-    /// <param name="logger">The logger instance for recording operations and errors</param>
-    /// <param name="consoleHelper">The console helper instance for user interaction</param>
-    public CommandManager(ILogger logger, ConsoleHelper consoleHelper)
-    {
-        _logger = logger;
-        _consoleHelper = consoleHelper;
-    }
+    private readonly ILogger _logger = logger;
+    private readonly ConsoleHelper _consoleHelper = consoleHelper;
 
     /// <summary>
     /// Creates and configures the root command with all available subcommands.
@@ -37,6 +31,7 @@ public class CommandManager
         rootCommand.AddCommand(CreatePullCommand());
         rootCommand.AddCommand(CreateRemoveCommand());
         rootCommand.AddCommand(CreateSetUrlCommand());
+        rootCommand.AddCommand(CreateServeCommand());
         
         return rootCommand;
     }
@@ -100,6 +95,21 @@ public class CommandManager
             var handler = new SetUrlCommandHandler(url, _logger);
             await handler.ExecuteAsync().ConfigureAwait(false);
         }, argument);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the 'serve' command for starting the RemoteLlama proxy server.
+    /// </summary>
+    private Command CreateServeCommand()
+    {
+        var command = new Command("serve", "Start the RemoteLlama proxy server");
+        command.SetHandler(async () =>
+        {
+            var handler = new ServeCommandHandler(_logger);
+            await handler.ExecuteAsync().ConfigureAwait(false);
+        });
 
         return command;
     }

@@ -6,17 +6,10 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using RemoteLlama.Helpers;
 
-public class PullCommandHandler : BaseCommandHandler
+public class PullCommandHandler(string modelId, ILogger logger, ConsoleHelper consoleHelper) : BaseCommandHandler(logger)
 {
-    private readonly string _modelId;
-    private readonly ConsoleHelper _consoleHelper;
-
-    public PullCommandHandler(string modelId, ILogger logger, ConsoleHelper consoleHelper) 
-        : base(logger)
-    {
-        _modelId = modelId;
-        _consoleHelper = consoleHelper;
-    }
+    private readonly string _modelId = modelId;
+    private readonly ConsoleHelper _consoleHelper = consoleHelper;
 
     protected override async Task ExecuteImplAsync()
     {

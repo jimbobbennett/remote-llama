@@ -9,8 +9,8 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/bin/Debug/net9.0/RemoteLlama.dll",
-            "args": ["pull", "llama3.2"],
+            "program": "${workspaceFolder}/src/RemoteLlama/bin/Debug/net9.0/RemoteLlama.dll",
+            "args": ["serve"],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,
             "console": "internalConsole"

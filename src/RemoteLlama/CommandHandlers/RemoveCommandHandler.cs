@@ -39,7 +39,7 @@ public class RemoveCommandHandler : BaseCommandHandler
         // Check for a 404 - this is an acceptable error code
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            _logger.LogInformation("Error: model '{ModelId}' not found", _modelId);
+            _logger.LogError("Error: model '{ModelId}' not found", _modelId);
             return;
         }
 
