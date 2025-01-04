@@ -26,7 +26,7 @@ internal class CommandManager(ILogger logger, IConsoleHelper consoleHelper)
     public RootCommand CreateRootCommand()
     {
         var rootCommand = new RootCommand("RemoteLlama - Manage local LLM models");
-        
+
         // Add all available subcommands to the root command
         rootCommand.AddCommand(CreatePullCommand());
         rootCommand.AddCommand(CreateRemoveCommand());
@@ -38,7 +38,7 @@ internal class CommandManager(ILogger logger, IConsoleHelper consoleHelper)
         rootCommand.AddCommand(CreateListCommand());
         rootCommand.AddCommand(CreatePsCommand());
         rootCommand.AddCommand(CreateStopCommand());
-        
+
         return rootCommand;
     }
 
@@ -81,7 +81,8 @@ internal class CommandManager(ILogger logger, IConsoleHelper consoleHelper)
     {
         // Define the command and its required model ID argument
         var command = new Command("rm", "Remove a downloaded model");
-        var modelArgument = new Argument<string[]>("model", "The model ID to remove"){
+        var modelArgument = new Argument<string[]>("model", "The model ID to remove")
+        {
             Arity = ArgumentArity.OneOrMore
         };
         var helpFlag = new Option<bool>(["-h", "--help"], "help for rm");
@@ -233,7 +234,34 @@ internal class CommandManager(ILogger logger, IConsoleHelper consoleHelper)
                 return;
             }
 
-            var handler = new ShowCommandHandler(model, license, modelfile, parameters, system, template, _logger, _consoleHelper);
+            int optionCount = Convert.ToInt32(license) + Convert.ToInt32(modelfile) + Convert.ToInt32(parameters) + Convert.ToInt32(system) + Convert.ToInt32(template);
+            if (optionCount > 1)
+            {
+                _consoleHelper.ShowError("Error: Only one of --license, --modelfile, --parameters, --system, or --template options is allowed.");
+                return;
+            }
+
+            var fieldToShow = ShowCommandHandler.FieldToShow.All;
+            switch (true)
+            {
+                case bool _ when license:
+                    fieldToShow = ShowCommandHandler.FieldToShow.License;
+                    break;
+                case bool _ when modelfile:
+                    fieldToShow = ShowCommandHandler.FieldToShow.Modelfile;
+                    break;
+                case bool _ when parameters:
+                    fieldToShow = ShowCommandHandler.FieldToShow.Parameters;
+                    break;
+                case bool _ when system:
+                    fieldToShow = ShowCommandHandler.FieldToShow.System;
+                    break;
+                case bool _ when template:
+                    fieldToShow = ShowCommandHandler.FieldToShow.Template;
+                    break;
+            }
+
+            var handler = new ShowCommandHandler(model, fieldToShow, _logger, _consoleHelper);
             await handler.ExecuteAsync().ConfigureAwait(false);
         }, modelArgument, helpFlag, licenseFlag, modelfileFlag, parametersFlag, systemFlag, templateFlag);
 
