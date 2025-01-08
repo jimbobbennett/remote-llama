@@ -10,7 +10,7 @@ namespace RemoteLlama.CommandHandlers;
 
 internal class RunCommandHandler(string model, string prompt, string format, bool insecure, string keepAlive, bool noWordWrap, bool verbose, ILogger logger, IConsoleHelper consoleHelper) : BaseCommandHandler(logger, consoleHelper)
 {
-    private readonly string _model = model;
+    private string _model = model;
     private readonly string _prompt = prompt;
     private readonly string _format = format;
     private readonly bool _insecure = insecure;
@@ -20,6 +20,14 @@ internal class RunCommandHandler(string model, string prompt, string format, boo
 
     protected override Task ExecuteImplAsync()
     {
+        // First check for model redirects
+        var redirected = ConfigManager.GetRedirectedModel(_model);
+        if (redirected is not null && redirected != _model)
+        {
+            Logger.LogInformation("Model {Model} redirected to {Redirected}", _model, redirected);
+            _model = redirected;
+        }
+        
         // There are 2 scenarios here:
         // 1. The prompt is given in the command line, so process that and end the command
         // 2. The prompt is not given in the command line, so start the prompt loop

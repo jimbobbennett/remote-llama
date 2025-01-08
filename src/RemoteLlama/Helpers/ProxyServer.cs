@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 namespace RemoteLlama.Helpers;
@@ -6,7 +7,7 @@ namespace RemoteLlama.Helpers;
 internal class ProxyServer(string targetServerUrl, ILogger logger)
 {
     private readonly string _targetServerUrl = targetServerUrl;
-    private readonly ILogger logger = logger;
+    private readonly ILogger _logger = logger;
 
     public async Task Start(int port = 11434)
     {
@@ -21,7 +22,7 @@ internal class ProxyServer(string targetServerUrl, ILogger logger)
         listener.Prefixes.Add($"http://*:{port}/");
         listener.Start();
 
-        logger.LogInformation("Proxy server started on port {port}. Forwarding to {_targetServerUrl}", port, _targetServerUrl);
+        _logger.LogInformation("Proxy server started on port {port}. Forwarding to {_targetServerUrl}", port, _targetServerUrl);
 
         while (true)
         {
@@ -35,7 +36,7 @@ internal class ProxyServer(string targetServerUrl, ILogger logger)
         var request = context.Request;
         var response = context.Response;
 
-        logger.LogInformation("Processing request: {HttpMethod} {RawUrl}", request.HttpMethod, request.RawUrl);
+        _logger.LogInformation("Processing request: {HttpMethod} {RawUrl}", request.HttpMethod, request.RawUrl);
 
         var targetRoute = request.RawUrl?.TrimStart('/') ?? "";
         if (targetRoute.StartsWith("api/", StringComparison.OrdinalIgnoreCase))
@@ -45,7 +46,7 @@ internal class ProxyServer(string targetServerUrl, ILogger logger)
 
         var targetUrl = $"{_targetServerUrl}{targetRoute}";
 
-        logger.LogInformation("Calling target URL {targetUrl}", targetUrl);
+        _logger.LogInformation("Calling target URL {targetUrl}", targetUrl);
 
         try
         {
@@ -57,16 +58,7 @@ internal class ProxyServer(string targetServerUrl, ILogger logger)
                 proxyRequest.Headers.TryAddWithoutValidation(header!, request.Headers.GetValues(header)!);
             }
 
-            // Copy request content
-            if (request.ContentLength64 > 0)
-            {
-                using var stream = request.InputStream;
-                var contentBytes = new byte[request.ContentLength64];
-                var read = await stream.ReadAsync(contentBytes.AsMemory(0, contentBytes.Length)).ConfigureAwait(false);
-                proxyRequest.Content = new ByteArrayContent(contentBytes);
-                proxyRequest.Content.Headers.ContentType = request.ContentType != null ?
-                    System.Net.Http.Headers.MediaTypeHeaderValue.Parse(request.ContentType) : null;
-            }
+            await CopyBody(request, proxyRequest).ConfigureAwait(false);
 
             using var proxyResponse = await httpClient.SendAsync(proxyRequest, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
 
@@ -79,7 +71,7 @@ internal class ProxyServer(string targetServerUrl, ILogger logger)
 
             // Send response content as a stream in chunks
             using var responseStream = await proxyResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
-            var buffer = new byte[4096]; 
+            var buffer = new byte[4096];
             int bytesRead;
             while ((bytesRead = await responseStream.ReadAsync(buffer.AsMemory(0, buffer.Length)).ConfigureAwait(false)) > 0)
             {
@@ -95,6 +87,68 @@ internal class ProxyServer(string targetServerUrl, ILogger logger)
         finally
         {
             response.Close();
+        }
+    }
+
+    /// <summary>
+    /// Copies the body of the request to the proxy request.
+    /// 
+    /// If ths request is to the /generate endpoint, then we may need to intercept the body and change the model
+    /// name depending on the redirect models configuration.
+    /// </summary>
+    /// <param name="request">The original request</param>
+    /// <param name="proxyRequest">The request that will be sent to the remote Ollama endpoint</param>
+    private async Task CopyBody(HttpListenerRequest request, HttpRequestMessage proxyRequest)
+    {
+        // Copy request content
+        if (request.ContentLength64 > 0)
+        {
+            using var stream = request.InputStream;
+            var contentBytes = new byte[request.ContentLength64];
+            await stream.ReadAsync(contentBytes.AsMemory(0, contentBytes.Length)).ConfigureAwait(false);
+            proxyRequest.Content = new ByteArrayContent(contentBytes);
+
+            if (request.RawUrl is not null)
+            {
+                // if the request is to the /generate or /chat endpoint, we may need to change the model name
+                if (request.RawUrl.TrimEnd('/').EndsWith("chat", StringComparison.OrdinalIgnoreCase) ||
+                    request.RawUrl.TrimEnd('/').EndsWith("generate", StringComparison.OrdinalIgnoreCase))
+                {
+                    // read the input stream and deserialize the JSON into a dynamic object
+                    var content = System.Text.Encoding.UTF8.GetString(contentBytes);
+                    var jsonDocument = JsonSerializer.Deserialize<JsonDocument>(content);
+
+                    _logger.LogDebug("Processing request on {url} with body:\n{body}", request.RawUrl, content);
+
+                    if (jsonDocument != null)
+                    {
+                        var root = jsonDocument.RootElement;
+
+                        // Convert JsonElement to a mutable dictionary
+                        var jsonObject = JsonSerializer.Deserialize<Dictionary<string, object>>(root.GetRawText());
+
+                        if (jsonObject != null)
+                        {
+                            // Update a value in the JSON object
+                            if (jsonObject.TryGetValue("model", out var modelValue))
+                            {
+                                var model = modelValue?.ToString();
+                                if (!string.IsNullOrEmpty(model))
+                                {
+                                    var redirectedModel = ConfigManager.GetRedirectedModel(model);
+                                    jsonObject["model"] = redirectedModel;
+
+                                    var updatedJsonBytes = JsonSerializer.SerializeToUtf8Bytes(jsonObject);
+                                    proxyRequest.Content = new ByteArrayContent(updatedJsonBytes);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            proxyRequest.Content.Headers.ContentType = request.ContentType != null ?
+                System.Net.Http.Headers.MediaTypeHeaderValue.Parse(request.ContentType) : null;
         }
     }
 }

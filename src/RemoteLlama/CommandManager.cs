@@ -31,6 +31,7 @@ internal class CommandManager(ILogger logger, IConsoleHelper consoleHelper)
         rootCommand.AddCommand(CreatePullCommand());
         rootCommand.AddCommand(CreateRemoveCommand());
         rootCommand.AddCommand(CreateSetUrlCommand());
+        rootCommand.AddCommand(CreateRedirectModelCommand());
         rootCommand.AddCommand(CreateServeCommand());
         rootCommand.AddCommand(CreateCreateCommand());
         rootCommand.AddCommand(CreateCopyCommand());
@@ -126,6 +127,30 @@ internal class CommandManager(ILogger logger, IConsoleHelper consoleHelper)
             var handler = new SetUrlCommandHandler(url, _logger, _consoleHelper);
             await handler.ExecuteAsync().ConfigureAwait(false);
         }, argument);
+
+        return command;
+    }
+
+    /// <summary>
+    /// Creates the 'redirect-model' command for configuring a model redirect.
+    /// </summary>
+    /// <returns>A configured Command instance for the redirect-model operation</returns>
+    private Command CreateRedirectModelCommand()
+    {
+        // Define the command and its required URL argument
+        var command = new Command("redirect-model", "Redirect any calls to one model to use another");
+        var sourceArgument = new Argument<string>("source", "The source model");
+        var destinationArgument = new Argument<string>("destination", "The destination model");
+        
+        command.AddArgument(sourceArgument);
+        command.AddArgument(destinationArgument);
+
+        // Set up the command handler that will execute when this command is invoked
+        command.SetHandler(async (source, destination) =>
+        {
+            var handler = new RedirectModelCommandHandler(source, destination, _logger, _consoleHelper);
+            await handler.ExecuteAsync().ConfigureAwait(false);
+        }, sourceArgument, destinationArgument);
 
         return command;
     }

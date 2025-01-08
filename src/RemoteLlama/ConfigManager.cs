@@ -48,6 +48,29 @@ internal static class ConfigManager
     }
 
     /// <summary>
+    /// Gets or sets the model redirects configuration value.
+    /// </summary>
+    public static List<ModelRedirect> ModelRedirects
+    {
+        get => GetConfig().ModelRedirects;
+        set
+        {
+            var config = GetConfig();
+            config.ModelRedirects = value;
+            SaveConfig(config);
+        }
+    }
+
+    /// <summary>
+    /// Retrieves the destination model for a given source model, if a redirect exists.
+    /// If no redirect exists, the source model is returned.
+    /// Redirects are used by the run command, and the /generate API to map one model to another.
+    /// </summary>
+    /// <param name="source">The source model for the redirect</param>
+    /// <returns>The destination model for the redirect, or the source if there is no redirect</returns>
+    public static string GetRedirectedModel(string source) => GetConfig().ModelRedirects.FirstOrDefault(r => r.Source == source)?.Destination ?? source;
+
+    /// <summary>
     /// Retrieves the current configuration, creating it if it doesn't exist.
     /// </summary>
     /// <returns>The current configuration object.</returns>
@@ -82,6 +105,12 @@ internal static class ConfigManager
         _config = config;
     }
 
+    public class ModelRedirect
+    {
+        public string Source { get; set; } = string.Empty;
+        public string Destination { get; set; } = string.Empty;
+    }
+
     /// <summary>
     /// Internal configuration class that defines the structure of the config file.
     /// </summary>
@@ -91,5 +120,10 @@ internal static class ConfigManager
         /// The URL configuration value.
         /// </summary>
         public string Url { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Model redirects to use to redirect calls from one model to another
+        /// </summary>
+        public List<ModelRedirect> ModelRedirects { get; set; } = new();
     }
 } 
