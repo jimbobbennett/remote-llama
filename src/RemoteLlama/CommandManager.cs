@@ -38,6 +38,7 @@ internal class CommandManager(ILogger logger, IConsoleHelper consoleHelper)
         rootCommand.AddCommand(CreateListCommand());
         rootCommand.AddCommand(CreatePsCommand());
         rootCommand.AddCommand(CreateStopCommand());
+        rootCommand.AddCommand(CreateRunCommand());
 
         return rootCommand;
     }
@@ -355,7 +356,10 @@ internal class CommandManager(ILogger logger, IConsoleHelper consoleHelper)
     {
         var command = new Command("run", "Run a model");
         var modelArgument = new Argument<string>("model", "The model to run");
-        var promptArgument = new Argument<string>("prompt", "The prompt to use");
+        var promptArgument = new Argument<string>("prompt", "The prompt to use")
+        {
+             Arity = ArgumentArity.ZeroOrOne
+        };
         var formatFlag = new Option<string>("--format", "Response format (e.g. json)");
         var helpFlag = new Option<bool>(["-h", "--help"], "help for run");
         var insecureFlag = new Option<bool>("--insecure", "Use an insecure registry");

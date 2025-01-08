@@ -53,6 +53,13 @@ internal class ConsoleHelper : IConsoleHelper
 
     public void ShowError(string errorMessage) => AnsiConsole.MarkupLine($"[red]{errorMessage}[/]");
 
+    public Task<T> RunWithSpinner<T>(Func<StatusContext, Task<T>> func, string status = "|")
+    {
+        return AnsiConsole.Status()
+            .Spinner(Spinner.Known.Dots)
+            .StartAsync(status, func);
+    }
+
     public void WriteTable(IEnumerable<string> headers, IEnumerable<IEnumerable<string>> rows)
     {
         var table = new Table();
@@ -69,4 +76,37 @@ internal class ConsoleHelper : IConsoleHelper
 
         AnsiConsole.Write(table);
     }
+
+    public void WriteColumns(IEnumerable<IEnumerable<string>> rows)
+    {
+        var grid = new Grid();
+
+        // Get the number of items per row and ensure they are the same
+        var itemCount = rows.First().Count();
+        if (rows.Any(row => row.Count() != itemCount))
+        {
+            throw new ArgumentException("All rows must have the same number of items.");
+        }
+
+        // Create itemCount number of columns
+        for (var i = 0; i < itemCount; i++)
+        {
+            grid.AddColumn();
+        }
+
+        // Add each row to the grid
+        foreach (var row in rows)
+        {
+            grid.AddRow(row.ToArray());
+        }
+
+        AnsiConsole.Write(grid);
+    }
+
+    public void WriteWord(string word)
+    {
+        AnsiConsole.Write(word);
+    }
+
+    public void WriteLine(string word) => AnsiConsole.WriteLine(word);
 }
