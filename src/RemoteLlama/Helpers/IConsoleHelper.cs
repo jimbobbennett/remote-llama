@@ -11,4 +11,5 @@ internal interface IConsoleHelper
     Task<T> RunWithSpinner<T>(Func<StatusContext, Task<T>> func, string status = "|");
     void WriteWord(string word);
     void WriteLine(string word);
+    string? Prompt(string prompt);
 }

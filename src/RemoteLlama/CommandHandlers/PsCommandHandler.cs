@@ -16,7 +16,10 @@ internal class PsCommandHandler(ILogger logger, IConsoleHelper consoleHelper) : 
             var url = ConfigManager.Url + "ps";
             Logger.LogInformation("Running PS");
 
-            var modelResponse = await LoadModelResponse(url).ConfigureAwait(false);
+            using var client = new HttpClient();
+            client.Timeout = TimeSpan.FromSeconds(20);
+
+            var modelResponse = await LoadModelResponse(url, client).ConfigureAwait(false);
 
             if (modelResponse == null)
             {

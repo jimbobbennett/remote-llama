@@ -109,4 +109,6 @@ internal class ConsoleHelper : IConsoleHelper
     }
 
     public void WriteLine(string word) => AnsiConsole.WriteLine(word);
+
+    public string? Prompt(string prompt) => AnsiConsole.Ask<string>(prompt);
 }
