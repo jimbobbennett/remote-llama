@@ -6,6 +6,17 @@
     <RootNamespace>RemoteLlama</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+    <AssemblyName>ollama</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
+    <AssemblyName>ollama</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64'">
     <AssemblyName>ollama-darwin</AssemblyName>
   </PropertyGroup>
 
